@@ -39,7 +39,9 @@ def _validate_scalar(name: str, value: float, *, nonnegative: bool = False) -> f
         raise ValueError(f"{name} must be nonnegative, got {value}")
     return value
 
+import functools
 
+@functools.lru_cache()
 def _build_kernel(
     M: int,
     N: int,
