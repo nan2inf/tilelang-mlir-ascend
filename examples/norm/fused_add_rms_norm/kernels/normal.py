@@ -93,14 +93,17 @@ def _build_normal(
                             residual_tile[0:row_size, 0:N],
                         )
 
-                    if has_scale and dtype != "bfloat16":
-                        T.vmul(x_tile, tmp_scale, x_tile)
-
                     if dtype == "float32":
+                        if has_scale:
+                            T.vmul(x_tile, tmp_scale, x_tile)
                         T.vadd(x_tile, residual_tile, x_tile)
                     elif dtype == "float16":
-                        T.vadd(x_tile, residual_tile, x_tile)
                         T.vcast(x_tile, x_fp32)
+                        if has_scale:
+                            T.vmul(x_fp32, tmp_scale, x_fp32)
+                        T.vcast(residual_tile, sq_f32)
+                        T.vadd(x_fp32, sq_f32, x_fp32)
+                        T.vcast(x_fp32, x_tile, round_mode="rint")
                     else:
                         T.vcast(x_tile, x_fp32)
                         if has_scale:

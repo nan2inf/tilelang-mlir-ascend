@@ -226,11 +226,18 @@ def normal_ub_bytes(rows: int, n: int, dtype: str, stages: int = 1) -> int:
         + 2 * ub_align_bytes(rows * n_align * 4)
         + 2 * ub_align_bytes(rows * 4)
     )
+    fp16_add_workspace = 0
+    if dtype == "float16" and int(stages) == 1:
+        if rows >= 6:
+            fp16_add_workspace = ASCENDC_UB_USED
+        if n_align == n:
+            fp16_add_workspace += ub_align_bytes(rows * n_align * dtype_bytes)
     return (
         ASCENDC_UB_USED
         + TILELANG_LOWERING_RESERVE_BYTES
         + static_bytes
         + int(stages) * stage_bytes
+        + fp16_add_workspace
     )
 
 
