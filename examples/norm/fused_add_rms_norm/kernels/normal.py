@@ -107,7 +107,7 @@ def _build_normal(
                             T.vmul(x_fp32, tmp_scale, x_fp32)
                         T.vcast(residual_tile, sq_f32)
                         T.vadd(x_fp32, sq_f32, x_fp32)
-                        T.vcast(x_fp32, x_tile)
+                        T.vcast(x_fp32, x_tile, round_mode="rint")
 
                     if is_aligned and row_size == tile_rows:
                         T.copy(x_tile, residual_out[row_start, 0])
