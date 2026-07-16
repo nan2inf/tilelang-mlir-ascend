@@ -177,23 +177,12 @@ def _select_auto(
         return "multi_n", block_factor, N
 
     normal_row_factor = _common.max_normal_rows(N, dtype, ub_budget)
-    if M >= _ROW_ONE_MIN_M and (
-        normal_row_factor <= 1 or (dtype == "bfloat16" and N == _BF16_BALANCED_N)
+    if (
+        M >= _ROW_ONE_MIN_M
+        and (normal_row_factor <= 1 or (dtype == "bfloat16" and N == _BF16_BALANCED_N))
+        and _common.row_one_mb_fits(N, dtype, ub_budget)
     ):
-        if _common.row_one_mb_fits(N, dtype, ub_budget):
-            return "normal_row_one_auto_multibuffer", block_factor, N
-        if (
-            dtype == "float16"
-            and normal_row_factor == 0
-            and _common.row_one_mb_fits(
-                N,
-                dtype,
-                ub_budget,
-                inplace_square=True,
-            )
-        ):
-            return "normal_row_one_auto_multibuffer_inplace", block_factor, N
-
+        return "normal_row_one_auto_multibuffer", block_factor, N
     if normal_row_factor > 0:
         if _should_multibuffer_normal(
             dtype,

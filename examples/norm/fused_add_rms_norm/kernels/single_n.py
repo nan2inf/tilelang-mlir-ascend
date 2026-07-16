@@ -24,22 +24,27 @@ def build_single_n(M: int, N: int, eps: float, dtype: str, scale: float = 1.0):
                 residual_out: T.Tensor((M, N), dtype),
             ):
                 with T.Kernel(M, is_npu=True) as (pid_m, _):
-                    x_tile = T.alloc_ub((1, N), dtype)
-                    residual_tile = T.alloc_ub((1, N), dtype)
-                    sum_f32 = T.alloc_ub((1, N), "float32")
-                    sq_f32 = T.alloc_ub((1, N), "float32")
+                    x_tile = T.alloc_ub((1, n_align), dtype)
+                    residual_tile = T.alloc_ub((1, n_align), dtype)
+                    sum_f32 = T.alloc_ub((1, n_align), "float32")
+                    sq_f32 = T.alloc_ub((1, n_align), "float32")
                     rstd_block = T.alloc_ub((1, 1), "float32")
 
+                    if tail_cols > 0:
+                        T.clear(x_tile)
+                        T.clear(residual_tile)
                     T.copy(x[pid_m : pid_m + 1, 0:N], x_tile[0:1, 0:N])
                     T.copy(residual[pid_m : pid_m + 1, 0:N], residual_tile[0:1, 0:N])
 
+                    T.vcast(x_tile, sum_f32)
                     if has_scale:
-                        T.vmul(x_tile, tmp_scale, x_tile)
-                    T.vadd(x_tile, residual_tile, x_tile)
+                        T.vmul(sum_f32, tmp_scale, sum_f32)
+                    T.vcast(residual_tile, sq_f32)
+                    T.vadd(sum_f32, sq_f32, sum_f32)
+                    T.vcast(sum_f32, x_tile, round_mode="rint")
                     T.copy(x_tile[0:1, 0:N], residual_out[pid_m : pid_m + 1, 0:N])
                     T.copy(weight[0:N], residual_tile[0, 0:N])
 
-                    T.vcast(x_tile, sum_f32)
                     T.vmul(sum_f32, sum_f32, sq_f32)
                     T.vmul(sq_f32, avg_factor, sq_f32)
 
@@ -48,7 +53,7 @@ def build_single_n(M: int, N: int, eps: float, dtype: str, scale: float = 1.0):
                         rstd_block,
                         dims=1,
                         reduce_mode="sum",
-                        size=[1, N],
+                        size=[1, n_align],
                     )
                     T.vadd(rstd_block, tmp_eps, rstd_block)
                     T.vrsqrt(rstd_block, rstd_block)

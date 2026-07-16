@@ -197,10 +197,12 @@ def build_merge_n(M: int, N: int, eps: float, dtype: str, scale: float = 1.0):
                         )
 
                     if dtype == "float16":
+                        T.vcast(x_tile, sum_f32)
                         if has_scale:
-                            T.vmul(x_tile, tmp_scale, x_tile)
-                        T.vadd(x_tile, residual_tile, residual_sum_tile)
-                        T.vcast(residual_sum_tile, sum_f32)
+                            T.vmul(sum_f32, tmp_scale, sum_f32)
+                        T.vcast(residual_tile, sq_f32)
+                        T.vadd(sum_f32, sq_f32, sum_f32)
+                        T.vcast(sum_f32, residual_sum_tile, round_mode="rint")
                     elif dtype == "float32":
                         if has_scale:
                             T.vmul(x_tile, tmp_scale, x_tile)

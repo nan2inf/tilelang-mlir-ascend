@@ -14,7 +14,6 @@ def _build_row_one(
     dtype: str,
     scale: float = 1.0,
     auto_multibuffer: bool = False,
-    inplace_square: bool = False,
 ):
     require_tilelang()
     n_align = aligned_cols(N, dtype)
@@ -35,7 +34,7 @@ def _build_row_one(
     )
     def _kernel(block_m, block_n):
         x_fp32_cols = 1 if dtype == "float32" else n_align
-        sq_f32_cols = 1 if dtype == "float32" or inplace_square else n_align
+        sq_f32_cols = 1 if dtype == "float32" else n_align
         gamma_fp32_cols = n_align if dtype == "bfloat16" else 1
 
         @T.prim_func
@@ -96,34 +95,25 @@ def _build_row_one(
                             size=[1, n_align],
                         )
                     elif dtype == "float16":
+                        T.vcast(x_tile, x_fp32)
                         if has_scale:
-                            T.vmul(x_tile, tmp_scale, x_tile)
-                        T.vadd(x_tile, residual_tile, x_tile)
+                            T.vmul(x_fp32, tmp_scale, x_fp32)
+                        T.vcast(residual_tile, sq_f32)
+                        T.vadd(x_fp32, sq_f32, x_fp32)
+                        T.vcast(x_fp32, x_tile, round_mode="rint")
                         if is_aligned:
                             T.copy(x_tile, residual_out[row_start, 0])
                         else:
                             T.copy(x_tile[0, 0:N], residual_out[row_start, 0:N])
-                        T.vcast(x_tile, x_fp32)
-                        if inplace_square:
-                            T.vmul(x_fp32, x_fp32, x_fp32)
-                            T.vmul(x_fp32, avg_factor, x_fp32)
-                            T.reduce(
-                                x_fp32,
-                                rstd_block,
-                                dims=1,
-                                reduce_mode="sum",
-                                size=[1, n_align],
-                            )
-                        else:
-                            T.vmul(x_fp32, x_fp32, sq_f32)
-                            T.vmul(sq_f32, avg_factor, sq_f32)
-                            T.reduce(
-                                sq_f32,
-                                rstd_block,
-                                dims=1,
-                                reduce_mode="sum",
-                                size=[1, n_align],
-                            )
+                        T.vmul(x_fp32, x_fp32, sq_f32)
+                        T.vmul(sq_f32, avg_factor, sq_f32)
+                        T.reduce(
+                            sq_f32,
+                            rstd_block,
+                            dims=1,
+                            reduce_mode="sum",
+                            size=[1, n_align],
+                        )
                     else:
                         T.vcast(x_tile, x_fp32)
                         if has_scale:
@@ -153,8 +143,6 @@ def _build_row_one(
                         T.vmul(x_tile, rstd_block, x_tile)
                         T.vmul(x_tile, weight_tile, x_tile)
                     elif dtype == "float16":
-                        if inplace_square:
-                            T.vcast(x_tile, x_fp32)
                         T.vmul(x_fp32, rstd_block, x_fp32)
                         T.vcast(x_fp32, x_tile)
                         T.vmul(x_tile, weight_tile, x_tile)
@@ -190,23 +178,4 @@ def build_row_one_multibuffer(
         dtype,
         scale,
         auto_multibuffer=True,
-    )
-
-
-def build_row_one_inplace(
-    M: int,
-    N: int,
-    eps: float,
-    dtype: str,
-    scale: float = 1.0,
-):
-
-    return _build_row_one(
-        M,
-        N,
-        eps,
-        dtype,
-        scale,
-        auto_multibuffer=True,
-        inplace_square=True,
     )

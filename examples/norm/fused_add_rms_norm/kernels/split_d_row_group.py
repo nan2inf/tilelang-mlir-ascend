@@ -75,10 +75,12 @@ def build_split_d_row_group(
                                     residual_or_weight_tile[0, 0:block_n],
                                 )
                                 if dtype == "float16":
+                                    T.vcast(x_tile, sum_f32)
                                     if has_scale:
-                                        T.vmul(x_tile, tmp_scale, x_tile)
-                                    T.vadd(x_tile, residual_or_weight_tile, sum_tile)
-                                    T.vcast(sum_tile, sum_f32)
+                                        T.vmul(sum_f32, tmp_scale, sum_f32)
+                                    T.vcast(residual_or_weight_tile, aux_f32)
+                                    T.vadd(sum_f32, aux_f32, sum_f32)
+                                    T.vcast(sum_f32, sum_tile, round_mode="rint")
                                 else:
                                     T.vcast(x_tile, sum_f32)
                                     if has_scale:
@@ -128,10 +130,12 @@ def build_split_d_row_group(
                                     residual_or_weight_tile[0, 0:tail_cols],
                                 )
                                 if dtype == "float16":
+                                    T.vcast(x_tile, sum_f32)
                                     if has_scale:
-                                        T.vmul(x_tile, tmp_scale, x_tile)
-                                    T.vadd(x_tile, residual_or_weight_tile, sum_tile)
-                                    T.vcast(sum_tile, sum_f32)
+                                        T.vmul(sum_f32, tmp_scale, sum_f32)
+                                    T.vcast(residual_or_weight_tile, aux_f32)
+                                    T.vadd(sum_f32, aux_f32, sum_f32)
+                                    T.vcast(sum_f32, sum_tile, round_mode="rint")
                                 else:
                                     T.vcast(x_tile, sum_f32)
                                     if has_scale:

@@ -20,7 +20,6 @@ _KERNEL_FACTORIES = {
     "normal": _kernels.build_normal,
     "normal_auto_multibuffer": _kernels.build_normal_multibuffer,
     "normal_row_one_auto_multibuffer": _kernels.build_row_one_multibuffer,
-    "normal_row_one_auto_multibuffer_inplace": _kernels.build_row_one_inplace,
     "merge_n": _kernels.build_merge_n,
     "multi_n": _kernels.build_multi_n,
     "split_d": _kernels.build_split_d,

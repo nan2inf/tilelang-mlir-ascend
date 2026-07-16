@@ -73,14 +73,16 @@ def build_multi_n(M: int, N: int, eps: float, dtype: str, scale: float = 1.0):
                         residual_tile[0:row_size, 0:N],
                     )
 
+                    T.vcast(x_tile, x_fp32)
                     if has_scale:
-                        T.vmul(x_tile, tmp_scale, x_tile)
-                    T.vadd(x_tile, residual_tile, sum_tile)
+                        T.vmul(x_fp32, tmp_scale, x_fp32)
+                    T.vcast(residual_tile, sq_f32)
+                    T.vadd(x_fp32, sq_f32, x_fp32)
+                    T.vcast(x_fp32, sum_tile, round_mode="rint")
                     T.copy(
                         sum_tile[0:row_size, 0:N],
                         residual_out[row_start : row_start + row_size, 0:N],
                     )
-                    T.vcast(sum_tile, x_fp32)
                     T.vmul(x_fp32, x_fp32, sq_f32)
                     T.vmul(sq_f32, avg_factor, sq_f32)
 

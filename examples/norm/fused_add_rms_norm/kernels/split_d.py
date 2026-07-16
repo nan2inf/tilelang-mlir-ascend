@@ -80,9 +80,12 @@ def build_split_d(M: int, N: int, eps: float, dtype: str, scale: float = 1.0):
                         T.vmul(sum_tile, sum_tile, sq_f32)
                         T.vmul(sq_f32, avg_factor, sq_f32)
                     elif dtype == "float16":
+                        T.vcast(x_tile, sum_f32)
                         if has_scale:
-                            T.vmul(x_tile, tmp_scale, x_tile)
-                        T.vadd(x_tile, residual_tile, sum_tile)
+                            T.vmul(sum_f32, tmp_scale, sum_f32)
+                        T.vcast(residual_tile, sq_f32)
+                        T.vadd(sum_f32, sq_f32, sum_f32)
+                        T.vcast(sum_f32, sum_tile, round_mode="rint")
                         T.copy(
                             sum_tile[0:row_size, 0:block_n],
                             residual_out[
@@ -90,7 +93,6 @@ def build_split_d(M: int, N: int, eps: float, dtype: str, scale: float = 1.0):
                                 n_start : n_start + block_n,
                             ],
                         )
-                        T.vcast(sum_tile, sum_f32)
                         T.vmul(sum_f32, sum_f32, sq_f32)
                         T.vmul(sq_f32, avg_factor, sq_f32)
                     else:
@@ -152,9 +154,12 @@ def build_split_d(M: int, N: int, eps: float, dtype: str, scale: float = 1.0):
                         T.vmul(sum_tile, sum_tile, sq_f32)
                         T.vmul(sq_f32, avg_factor, sq_f32)
                     elif dtype == "float16":
+                        T.vcast(x_tile, sum_f32)
                         if has_scale:
-                            T.vmul(x_tile, tmp_scale, x_tile)
-                        T.vadd(x_tile, residual_tile, sum_tile)
+                            T.vmul(sum_f32, tmp_scale, sum_f32)
+                        T.vcast(residual_tile, sq_f32)
+                        T.vadd(sum_f32, sq_f32, sum_f32)
+                        T.vcast(sum_f32, sum_tile, round_mode="rint")
                         T.copy(
                             sum_tile[0:row_size, 0:tail_cols],
                             residual_out[
@@ -162,7 +167,6 @@ def build_split_d(M: int, N: int, eps: float, dtype: str, scale: float = 1.0):
                                 n_start : n_start + tail_cols,
                             ],
                         )
-                        T.vcast(sum_tile, sum_f32)
                         T.vmul(sum_f32, sum_f32, sq_f32)
                         T.vmul(sq_f32, avg_factor, sq_f32)
                     else:

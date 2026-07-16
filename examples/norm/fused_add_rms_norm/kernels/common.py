@@ -59,10 +59,10 @@ def single_n_ub_bytes(n: int, dtype: str) -> int:
     n_align = aligned_cols(n, dtype)
     if dtype == "float16":
         allocations = [
-            ub_align_bytes(n * 2),
-            ub_align_bytes(n * 2),
-            ub_align_bytes(n * 4),
-            ub_align_bytes(n * 4),
+            ub_align_bytes(n_align * 2),
+            ub_align_bytes(n_align * 2),
+            ub_align_bytes(n_align * 4),
+            ub_align_bytes(n_align * 4),
             ub_align_bytes(4),
         ]
     else:
@@ -263,21 +263,15 @@ def row_one_mb_ub_bytes(
     dtype: str,
     *,
     stages: int = MULTIBUFFER_STAGES,
-    inplace_square: bool = False,
 ) -> int:
     if n <= 0 or stages <= 0:
-        return DEFAULT_ASCENDC_UB_BYTES + 1
-    if inplace_square and dtype != "float16":
         return DEFAULT_ASCENDC_UB_BYTES + 1
 
     n_align = aligned_cols(n, dtype)
     if int(stages) != 2:
         return DEFAULT_ASCENDC_UB_BYTES + 1
 
-    if inplace_square:
-        bytes_per_col = 14
-        scalar_bytes = 2 * ub_align_bytes(4)
-    elif dtype == "float16":
+    if dtype == "float16":
         bytes_per_col = 18
         scalar_bytes = 2 * ub_align_bytes(4)
     elif dtype == "bfloat16":
@@ -297,13 +291,11 @@ def row_one_mb_fits(
     ub_budget: int = DEFAULT_ASCENDC_UB_BYTES,
     *,
     stages: int = MULTIBUFFER_STAGES,
-    inplace_square: bool = False,
 ) -> bool:
     return row_one_mb_ub_bytes(
         n,
         dtype,
         stages=stages,
-        inplace_square=inplace_square,
     ) <= int(ub_budget)
 
 
