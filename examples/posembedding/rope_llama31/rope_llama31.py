@@ -1,3 +1,4 @@
+import functools
 import math
 from typing import Dict, Tuple
 
@@ -28,6 +29,7 @@ _DTYPE_NAMES = {
 }
 
 
+@functools.lru_cache()
 def _build_plan_kernel(
     batch: int,
     seq_len: int,
